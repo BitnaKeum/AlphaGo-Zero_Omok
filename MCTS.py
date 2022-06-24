@@ -1,12 +1,11 @@
-import numpy as np
-import logging
-import config
+# Node, Edge, MCTS 클래스 포함
 
-from utils import setup_logger
+import numpy as np
+import config
 import loggers as lg
 
-class Node():
 
+class Node():
 	def __init__(self, state):
 		self.state = state
 		self.playerTurn = state.playerTurn
@@ -19,8 +18,8 @@ class Node():
 		else:
 			return True
 
-class Edge():
 
+class Edge():
 	def __init__(self, inNode, outNode, prior, action):
 		self.id = inNode.state.id + '|' + outNode.state.id
 		self.inNode = inNode
@@ -37,18 +36,16 @@ class Edge():
 				
 
 class MCTS():
-
 	def __init__(self, root, cpuct):
 		self.root = root
 		self.tree = {}
-		self.cpuct = cpuct
+		self.cpuct = cpuct	# level of exploration
 		self.addNode(root)
 	
 	def __len__(self):
 		return len(self.tree)
 
 	def moveToLeaf(self):
-
 		lg.logger_mcts.info('------MOVING TO LEAF------')
 
 		breadcrumbs = []
@@ -58,10 +55,9 @@ class MCTS():
 		value = 0
 
 		while not currentNode.isLeaf():
-
 			lg.logger_mcts.info('PLAYER TURN...%d', currentNode.state.playerTurn)
 		
-			maxQU = -99999
+			maxQU = -99999	# a = argmax(Q + U)
 
 			if currentNode == self.root:
 				epsilon = config.EPSILON
@@ -75,16 +71,14 @@ class MCTS():
 				Nb = Nb + edge.stats['N']
 
 			for idx, (action, edge) in enumerate(currentNode.edges):
-
-				U = self.cpuct * \
-					((1-epsilon) * edge.stats['P'] + epsilon * nu[idx] )  * \
-					np.sqrt(Nb) / (1 + edge.stats['N'])
+				U = self.cpuct * ((1-epsilon) * edge.stats['P'] + epsilon * nu[idx]) * np.sqrt(Nb) / (1 + edge.stats['N']) # 본 repo에서의 코드
+				# U = self.cpuct * edge.stats['P'] * np.sqrt(Nb) / (1 + edge.stats['N'])	# 논문에서의 코드
 					
 				Q = edge.stats['Q']
 
-				lg.logger_mcts.info('action: %d (%d)... N = %d, P = %f, nu = %f, adjP = %f, W = %f, Q = %f, U = %f, Q+U = %f'
-					, action, action % 7, edge.stats['N'], np.round(edge.stats['P'],6), np.round(nu[idx],6), ((1-epsilon) * edge.stats['P'] + epsilon * nu[idx] )
-					, np.round(edge.stats['W'],6), np.round(Q,6), np.round(U,6), np.round(Q+U,6))
+				lg.logger_mcts.info('action: %d (%d)... N = %d, P = %f, nu = %f, adjP = %f, W = %f, Q = %f, U = %f, Q+U = %f',
+					action, action % 7, edge.stats['N'], np.round(edge.stats['P'], 7), np.round(nu[idx], 7), ((1-epsilon) * edge.stats['P'] + epsilon * nu[idx]),
+					np.round(edge.stats['W'], 7), np.round(Q, 7), np.round(U, 7), np.round(Q+U, 7))
 
 				if Q + U > maxQU:
 					maxQU = Q + U
@@ -102,8 +96,7 @@ class MCTS():
 		return currentNode, value, done, breadcrumbs
 
 
-
-	def backFill(self, leaf, value, breadcrumbs):
+	def backFill(self, leaf, value, breadcrumbs):	# Back Propagation
 		lg.logger_mcts.info('------DOING BACKFILL------')
 
 		currentPlayer = leaf.state.playerTurn
@@ -115,17 +108,18 @@ class MCTS():
 			else:
 				direction = -1
 
+			# cheat sheet 참고
 			edge.stats['N'] = edge.stats['N'] + 1
 			edge.stats['W'] = edge.stats['W'] + value * direction
 			edge.stats['Q'] = edge.stats['W'] / edge.stats['N']
 
-			lg.logger_mcts.info('updating edge with value %f for player %d... N = %d, W = %f, Q = %f'
-				, value * direction
-				, playerTurn
-				, edge.stats['N']
-				, edge.stats['W']
-				, edge.stats['Q']
-				)
+			lg.logger_mcts.info('updating edge with value %f for player %d... N = %d, W = %f, Q = %f',
+				value * direction,
+				playerTurn,
+				edge.stats['N'],
+				edge.stats['W'],
+				edge.stats['Q'],
+			)
 
 			edge.outNode.state.render(lg.logger_mcts)
 

@@ -1,4 +1,5 @@
-import numpy as np
+# current_player의 뉴럴 네트워크를 재학습하는 데에 사용되는 이전 게임들의 메모리
+
 from collections import deque
 
 import config
@@ -10,13 +11,13 @@ class Memory:
 		self.stmemory = deque(maxlen=config.MEMORY_SIZE)
 
 	def commit_stmemory(self, identities, state, actionValues):
-		for r in identities(state, actionValues):
+		for r in identities(state, actionValues):	# r: (GameState(currentBoard, state.playerTurn), currentAV)
 			self.stmemory.append({
-				'board': r[0].board
-				, 'state': r[0]
-				, 'id': r[0].id
-				, 'AV': r[1]
-				, 'playerTurn': r[0].playerTurn
+				'board': r[0].board,
+				'state': r[0],
+				'id': r[0].id,
+				'playerTurn': r[0].playerTurn,
+				'AV': r[1]
 				})
 
 	def commit_ltmemory(self):

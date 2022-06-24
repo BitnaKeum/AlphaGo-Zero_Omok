@@ -4,16 +4,13 @@ import numpy as np
 import random
 
 import MCTS as mc
-from game import GameState
-from loss import softmax_cross_entropy_with_logits
 
 import config
 import loggers as lg
-import time
 
-import matplotlib.pyplot as plt
-from IPython import display
-import pylab as pl
+# import matplotlib.pyplot as plt
+# from IPython import display
+# import pylab as pl
 
 
 class User():
@@ -55,6 +52,8 @@ class Agent():
 
 	
 	def simulate(self):
+		# MCTS 프로세스 실행 (leaf node 선택 - 확장 및 평가 - Back Propagation)
+		# agent는 Tree의 leaf 노드로 이동하고, 뉴럴 네트워크를 이용해 노드의 value를 평가하고, 노드 value를 채움
 
 		lg.logger_mcts.info('ROOT NODE...%s', self.mcts.root.state.id)
 		self.mcts.root.state.render(lg.logger_mcts)
@@ -72,6 +71,7 @@ class Agent():
 
 
 	def act(self, state, tau):
+		# 시뮬레이션을 여러 번 반복해 현재 위치에서 어떤 액션이 가장 유리한지 판별하고, 액션 수행
 
 		if self.mcts == None or state.id not in self.mcts.tree:
 			self.buildMCTS(state)
@@ -133,11 +133,13 @@ class Agent():
 
 		if done == 0:
 	
+			# 평가
 			value, probs, allowedActions = self.get_preds(leaf.state)
 			lg.logger_mcts.info('PREDICTED VALUE FOR %d: %f', leaf.state.playerTurn, value)
 
 			probs = probs[allowedActions]
 
+			# 확장
 			for idx, action in enumerate(allowedActions):
 				newState, _, _ = leaf.state.takeAction(action)
 				if newState.id not in self.mcts.tree:
@@ -148,7 +150,7 @@ class Agent():
 					node = self.mcts.tree[newState.id]
 					lg.logger_mcts.info('existing node...%s...', node.id)
 
-				newEdge = mc.Edge(leaf, node, probs[idx], action)
+				newEdge = mc.Edge(leaf, node, probs[idx], action)	# 새로운 노드의 값 초기화 (N, W, Q, P)
 				leaf.edges.append((action, newEdge))
 				
 		else:
@@ -183,33 +185,35 @@ class Agent():
 		return action, value
 
 	def replay(self, ltmemory):
+		# 이전 게임들의 메모리를 이용해 뉴럴 네트워크를 재학습
 		lg.logger_mcts.info('******RETRAINING MODEL******')
 
 
 		for i in range(config.TRAINING_LOOPS):
-			minibatch = random.sample(ltmemory, min(config.BATCH_SIZE, len(ltmemory)))
+			minibatch = random.sample(ltmemory, min(config.BATCH_SIZE, len(ltmemory)))	# memory로부터 랜덤 샘플링
 
-			training_states = np.array([self.model.convertToModelInput(row['state']) for row in minibatch])
-			training_targets = {'value_head': np.array([row['value'] for row in minibatch])
-								, 'policy_head': np.array([row['AV'] for row in minibatch])} 
-
-			fit = self.model.fit(training_states, training_targets, epochs=config.EPOCHS, verbose=1, validation_split=0, batch_size = 32)
+			# MCTS의 value, Policy를 타겟으로 하여 학습
+			training_states = np.array([self.model.convertToModelInput(row['state']) for row in minibatch])	# 이게 nn 값
+			training_targets = {'value_head': np.array([row['value'] for row in minibatch]),	# v # 이게 MCTS 값이어야함
+								'policy_head': np.array([row['AV'] for row in minibatch])}		# p
+			fit = self.model.fit(training_states, training_targets, epochs=config.EPOCHS, verbose=1, validation_split=0, batch_size=32)
+			
 			lg.logger_mcts.info('NEW LOSS %s', fit.history)
 
-			self.train_overall_loss.append(round(fit.history['loss'][config.EPOCHS - 1],4))
-			self.train_value_loss.append(round(fit.history['value_head_loss'][config.EPOCHS - 1],4)) 
-			self.train_policy_loss.append(round(fit.history['policy_head_loss'][config.EPOCHS - 1],4)) 
+			self.train_overall_loss.append(round(fit.history['loss'][config.EPOCHS - 1], 4))
+			self.train_value_loss.append(round(fit.history['value_head_loss'][config.EPOCHS - 1], 4))
+			self.train_policy_loss.append(round(fit.history['policy_head_loss'][config.EPOCHS - 1], 4))
 
-		plt.plot(self.train_overall_loss, 'k')
-		plt.plot(self.train_value_loss, 'k:')
-		plt.plot(self.train_policy_loss, 'k--')
-
-		plt.legend(['train_overall_loss', 'train_value_loss', 'train_policy_loss'], loc='lower left')
-
-		display.clear_output(wait=True)
-		display.display(pl.gcf())
-		pl.gcf().clear()
-		time.sleep(1.0)
+		# plt.plot(self.train_overall_loss, 'k')
+		# plt.plot(self.train_value_loss, 'k:')
+		# plt.plot(self.train_policy_loss, 'k--')
+		#
+		# plt.legend(['train_overall_loss', 'train_value_loss', 'train_policy_loss'], loc='lower left')
+		#
+		# display.clear_output(wait=True)
+		# display.display(pl.gcf())
+		# pl.gcf().clear()
+		# time.sleep(1.0)
 
 		print('\n')
 		self.model.printWeightAverages()

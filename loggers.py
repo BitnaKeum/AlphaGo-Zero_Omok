@@ -1,16 +1,20 @@
+# log 파일들은 log 폴더에 저장됨
 
 from utils import setup_logger
-from settings import run_folder
+from config import run_folder
 
 ### SET all LOGGER_DISABLED to True to disable logging
 ### WARNING: the mcts log file gets big quite quickly
 
+# logging을 켜려면 LOGGER_DISABLED 값을 False로 설정
+# mcts log 파일은 크기가 기하급수적으로 커지는 점 유의
 LOGGER_DISABLED = {
-'main':False
-, 'memory':False
-, 'tourney':False
-, 'mcts':False
-, 'model': False}
+    'main': False,
+    'memory': False,
+    'tourney': False,
+    'mcts': False,
+    'model': False
+}
 
 
 logger_mcts = setup_logger('logger_mcts', run_folder + 'logs/logger_mcts.log')
@@ -19,6 +23,7 @@ logger_mcts.disabled = LOGGER_DISABLED['mcts']
 logger_main = setup_logger('logger_main', run_folder + 'logs/logger_main.log')
 logger_main.disabled = LOGGER_DISABLED['main']
 
+# logger_tourney 파일에서 평가 단계에서 각 이동에 첨부된 확률을 볼 수 있음
 logger_tourney = setup_logger('logger_tourney', run_folder + 'logs/logger_tourney.log')
 logger_tourney.disabled = LOGGER_DISABLED['tourney']
 
@@ -27,4 +32,5 @@ logger_memory.disabled = LOGGER_DISABLED['memory']
 
 logger_model = setup_logger('logger_model', run_folder + 'logs/logger_model.log')
 logger_model.disabled = LOGGER_DISABLED['model']
- 
+
+
