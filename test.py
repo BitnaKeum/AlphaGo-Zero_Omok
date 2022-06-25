@@ -12,7 +12,7 @@ import config
 
 env = Game()
 
-run_version = 2
+run_version = config.INITIAL_RUN_NUMBER
 player1version = -1 # -1이면 사람
 player2version = config.INITIAL_MODEL_VERSION
 EPISODES = 1
